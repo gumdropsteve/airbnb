@@ -43,7 +43,9 @@ def get_listing_title(listing):
     """
     returns the title of given listing
     """
-    return listing.find('meta')['content']
+    title = listing.find('meta')['content']
+    title = title.split(' - null - ')
+    return title[0]
 
 
 def get_top_row(listing):
