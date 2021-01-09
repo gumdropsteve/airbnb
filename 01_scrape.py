@@ -23,7 +23,7 @@ def get_room_classes(soup_page):
     """
     returns all the listings that can be found on the page (soup object) in a list
     """
-    rooms = soup_page.findAll('div', {'class':'_8ssblpx'})
+    rooms = soup_page.findAll('div', {'class':'_8ssblpx'})  #  _8ssblpx _uhpzdny _gig1e7 _1wcpzyga
     result = []
     for room in rooms:
         result.append(room)
@@ -135,13 +135,35 @@ def get_room_price(listing):
 
 
 def get_basic_facilities(listing):
-    ''' Returns the basic facilities'''
+    '''
+    returns a dictionary of the given listing's basic facilities with True / None values based on known possible basic facilites
+    '''
+    # make list of this listing's basic facilites
     try:
-        output = listing.findAll("div", {"class":"_kqh46o"})[1].text
-        output = output.split(' · ')
+        basic_facilities = listing.findAll("div", {"class":"_kqh46o"})[1].text
+        basic_facilities = basic_facilities.split(' · ')
     except:
-        output = []
-    return output
+        basic_facilities = []
+
+    # list of known possible basic facilites
+    possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
+                'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out']
+
+    # open a record for this listing
+    room_dict = {}
+
+    # add each basic facility to this room's record 
+    for f in basic_facilities:
+        if f in possible:
+            room_dict[f] = True
+        else:
+            raise Exception(f'unexpected basic_facilites | {f} | is new?')
+
+    # add None for any basic facilities this listing doesn't offer
+    for f in possible:
+        room_dict[f] = room_dict.get(f, None)
+
+    return room_dict
 
 
 def get_room_rating_and_reviews(listing):
@@ -169,20 +191,36 @@ def record_dataset(listings, file_path='output.csv', first_page=False):
     """
     data = []
     for l in listings:
+        # listing link
         a = get_listing_link(l)
+        # listing title
         b = get_listing_title(l)
+        # top row info
         c, d = get_top_row(l)
+        # room info (beds, baths, etc..)
         _ = get_room_info(l)
         e, f, g, h, i, j, k = _['guests'], _['bedrooms'], _['beds'], _['is_studio'], _['baths'], _['half_baths'], _['shared_baths']
         del _
+        # room nightly rate
         m = get_room_price(l)
-        n = get_basic_facilities(l)
-        o, p = get_room_rating_and_reviews(l)
-        out = [a, b, c, d, e, f, g, h, i, j, k, m, n, o, p]
+        # room rating and n reviews
+        n, o = get_room_rating_and_reviews(l)
+        # basic facilites
+        _ = get_basic_facilities(l)
+        possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
+                    'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out']
+        p = [_[bf] for bf in possible]
+        # list of all listing info
+        out = [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
+        # add it to the data collection 
         data.append(out)
     if first_page:
+        # column names
         names = ['url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
-                 'price', 'basic_facilities', 'avg_rating', 'n_reviews']
+                 'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
+                 "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
+                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool"
+                ]
         df = pd.DataFrame(data, columns=names)
     else:
         df = pd.read_csv(file_path)
