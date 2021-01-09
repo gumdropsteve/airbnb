@@ -50,14 +50,70 @@ def get_top_row(listing):
     """
     returns the top row of given listing's info
     """
-    return listing.find('div', {'class':'_1tanv1h'}).text  # _167gordg
+    top_row = listing.find('div', {'class':'_1tanv1h'}).text  # _167gordg
+    top_row = top_row.split(' in ')
+    # what are we looking at?
+    what_it_is = top_row[0]
+    # where is it?
+    where_it_is = top_row[1]
+    return what_it_is, where_it_is
 
 
 def get_room_info(listing):
     """
     returns room info of listing 
     """
-    return listing.find('div', {'class', '_kqh46o'}).text
+    room_info = listing.find('div', {'class', '_kqh46o'}).text
+    split_info = [i.split() for i in room_info.split(' · ')]
+    room_dict = {}
+    for i in split_info:
+        if i not in [['Studio'], ['Half-bath']]:
+            if len(i) == 2:
+                room_dict[i[1]] = i[0]
+            # shared-baths
+            elif len(i) == 3:
+                i = [i[0], '-'.join([i[1], i[2]])]
+                room_dict[i[1]] = i[0]
+            else:
+                print(f'unexpected room_info | unexpected split_info len(i)=={len(i)}!=2!=3\n{i}')
+                room_dict[' '.join(i)] = i[0]
+        else:
+            # Half-baths and Studios
+            if i[0] == 'Studio':
+                room_dict['is_studio'] = True
+            room_dict[i[0]] = 0
+    
+    weird_bedrooms = 0 
+    try:
+        room_dict['bedrooms']
+    except:
+        try:
+            room_dict['bedrooms'] = room_dict['bedroom']
+        except:
+            try:
+                room_dict['bedrooms'] = room_dict['Studio']
+            except:
+                weird_bedrooms += 1
+                print(f'weird bedrooms {weird_bedrooms}')
+                room_dict['bedrooms'] = room_dict.get('bedrooms')
+    
+    try:
+        room_dict['baths']
+    except:
+        try:
+            room_dict['baths'] = room_dict['bath']
+        except:
+            room_dict['baths'] = None
+    
+    room_dict['half_baths'] = room_dict.get('Half-bath')
+    room_dict['shared_baths'] = room_dict.get('shared-baths')
+    room_dict['is_studio'] = room_dict.get('is_studio', False)
+    room_dict['beds'] = room_dict.get('beds')
+    room_dict['guests'] = room_dict.get('beds')
+            
+    room_dict = {key:value for key,value in room_dict.items() if key in ['guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths']}
+            
+    return room_dict
 
 
 def get_room_price(listing):
@@ -72,50 +128,39 @@ def get_room_price(listing):
     # remove possible / at end of string
     if '/' in price:
         price = price[:len(price) - 1]
-    return price
+    # adjust for places with > 999 reviews
+    if ',' in price:
+        price = ''.join(price.split(','))
+    return float(price)
 
 
 def get_basic_facilities(listing):
     ''' Returns the basic facilities'''
     try:
-        output = listing.findAll("div", {"class":"_kqh46o"})[1].text.replace(" ","")  # Speeds up cleaning
+        output = listing.findAll("div", {"class":"_kqh46o"})[1].text
+        output = output.split(' · ')
     except:
         output = []
     return output
 
 
-def get_room_rating(listing):
+def get_room_rating_and_reviews(listing):
     """
-    returns star rating of given listing
+    returns star rating and number of reviews of given listing
     """
     try:
-        output = listing.find('div', {'class':'_vaj62s'}).text
+        output = listing.find('span', {'class':'_18khxk1'}).text
+        output = output.split('\xa0')
+        
+        avg_rating = float(output[0])
+        n_reviews = float(output[1][:-1].split('(')[1])
 
-        # focus the right side of the data
-        right_side = output.split(';')[1]
-        right_split = right_side.split(' ')
-
-        # find the detailed average review score (x.xxxxx)
-        detailed_score = right_split[0]
-        output = float(detailed_score)
-        return output
+        return avg_rating, n_reviews
     except:
-        return listing.find('div', {'class':'_vaj62s'})
-
-
-def get_n_reviews(listing):
-    '''
-    Returns the number of reviews
-    '''
-    try:
-        output = listing.findAll("span", {"class":"_krjbj"})[1].text
-        output = output.split(' ')
-        output = output[0]
-        output = int(output)
-    # Not all listings have reviews // extraction failed
-    except:
-        output = None   # Indicate that the extraction failed -> can indicate no reviews or a mistake in scraping
-    return output
+        try:
+            return listing.find('span', {'class':'_18khxk1'}), listing.find('span', {'class':'_18khxk1'})
+        except:
+            raise Exception(f'get_room_rating_and_reviews | listing == {listing}')
 
 
 def record_dataset(listings, file_path='output.csv', first_page=False):
@@ -126,16 +171,18 @@ def record_dataset(listings, file_path='output.csv', first_page=False):
     for l in listings:
         a = get_listing_link(l)
         b = get_listing_title(l)
-        c = get_top_row(l)
-        d = get_room_info(l)
-        e = get_room_price(l)
-        f = get_basic_facilities(l)
-        g = get_room_rating(l)
-        h = get_n_reviews(l)
-        out = [a, b, c, d, e, f, g, h]
+        c, d = get_top_row(l)
+        _ = get_room_info(l)
+        e, f, g, h, i, j, k = _['guests'], _['bedrooms'], _['beds'], _['is_studio'], _['baths'], _['half_baths'], _['shared_baths']
+        del _
+        m = get_room_price(l)
+        n = get_basic_facilities(l)
+        o, p = get_room_rating_and_reviews(l)
+        out = [a, b, c, d, e, f, g, h, i, j, k, m, n, o, p]
         data.append(out)
     if first_page:
-        names = ['url', 'title', 'top_row', 'room_info', 'price', 'basic_facilities', 'avg_rating', 'n_reviews']
+        names = ['url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
+                 'price', 'basic_facilities', 'avg_rating', 'n_reviews']
         df = pd.DataFrame(data, columns=names)
     else:
         df = pd.read_csv(file_path)
@@ -278,7 +325,7 @@ class airbnb_scrape():
         self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_shared_rooms', printout=printout)
         self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_shared_room_super_hosts', printout=printout)
 
-    
+
 locations = ['Oakland--California--United-States',
              'San-Diego--California--United-States',
              'San-Francisco--California--United-States',
