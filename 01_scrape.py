@@ -14,9 +14,11 @@ def get_page(url):
     """
     returns a soup object that contains all the information of a given webpage
     """
+    tos = str(datetime.now()) 
     result = requests.get(url)
     content = result.content
-    return BeautifulSoup(content, features='html.parser')
+    page = BeautifulSoup(content, features='html')
+    return page, tos
 
 
 def get_room_classes(soup_page):
@@ -34,7 +36,7 @@ def get_listing_link(listing):
     """
     returns the URL link of given listing
     """
-    listing_link = 'https://airbnb.com' + listing.find('a')['href']
+    listing_link = 'http://airbnb.com' + listing.find('a')['href']
     listing_link = listing_link.split('?')[0]
     return listing_link
 
@@ -186,12 +188,18 @@ def get_room_rating_and_reviews(listing):
         try:
             return listing.find('span', {'class':'_18khxk1'}), listing.find('span', {'class':'_18khxk1'})
         except:
-            raise Exception(f'get_room_rating_and_reviews | listing == {listing}')
+            raise Exception(f'get_room_rating_and_reviews | listing == {type(listing), len(listing)}')
 
 
-def record_dataset(listings, file_path='output.csv', first_page=False):
+def record_dataset(listings, tos, _filter, file_path='output.csv', first_page=False):
     """
     take scraped room classes and record their information to csv
+    
+    tos: time of scrape
+        > str datetime.datetime.now()
+       
+    _filter: filter applied to scrape
+        > str, None if no filter
     """
     data = []
     for l in listings:
@@ -217,22 +225,24 @@ def record_dataset(listings, file_path='output.csv', first_page=False):
                    ]
         p = [_[bf] for bf in possible]
         # list of all listing info
-        out = [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
+        out = [_filter] + [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
+        # add time of scrape to data as 1st datapoint (jan 15 2021)
+        out = [tos] + out
         # add it to the data collection 
         data.append(out)
     if first_page:
         # column names
-        names = ['url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
+        names = ['ds', 'search_filter',  # added jan 15 2021
+                 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
                  'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
                  "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
                  "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
-                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14
+                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14 2021
                 ]
         df = pd.DataFrame(data, columns=names)
     else:
         df = pd.read_csv(file_path)
-        names = df.columns
-        new_df = pd.DataFrame(data, columns=names)
+        new_df = pd.DataFrame(data, columns=df.columns)
         df = pd.concat([df, new_df], axis=0)
     df.to_csv(file_path, index=False)
     return len(df)
@@ -244,7 +254,7 @@ class airbnb_scrape():
         """
         set location, base (url) link, and blank record books
         """
-        self.base_link = f'https://www.airbnb.com/s/{location}/homes'
+        self.base_link = f'http://www.airbnb.com/s/{location}/homes'
         self.location = location
         self.location_alias = location_alias
         
@@ -319,7 +329,7 @@ class airbnb_scrape():
         record results of a given search link
         """
         # get 1st page
-        base_link_page_1 = get_page(base_link)
+        base_link_page_1, t = get_page(base_link)
         
         today = datetime.today()
         today = str(today).split(' ')[0]
@@ -327,9 +337,20 @@ class airbnb_scrape():
         
         # record the 1st page
         if printout:
-            print(record_dataset(get_room_classes(base_link_page_1), file_path=output_path, first_page=True))
+            # determine filter
+            f = search_alias
+            for s in self.location.lower().split('--'):
+                f = f.replace(s, '')
+            if f != '':
+                f = f[1:]
+            print(record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True))
         else:
-            record_dataset(get_room_classes(base_link_page_1), file_path=output_path, first_page=True)
+            f = search_alias
+            for s in self.location.lower().split('--'):
+                f = f.replace(s, '')
+            if f != '':
+                f = f[1:]
+            record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True)
         
         # get urls for other pages 
         if n_pages=='auto':
@@ -339,9 +360,24 @@ class airbnb_scrape():
         
         for url in self.page_urls:
             if printout:
-                print(record_dataset(get_room_classes(get_page(url)), file_path=output_path, first_page=False))
+                page, t = get_page(url)
+                f = search_alias
+                for s in self.location.lower().split('--'):
+                    f = f.replace(s, '')
+                if f != '':
+                    f = f[1:]
+                print(record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False))
             else:
-                record_dataset(get_room_classes(get_page(url)), file_path=output_path, first_page=False)
+                page, t = get_page(url)
+                f = search_alias
+                for s in self.location.lower().split('--'):
+                    f = f.replace(s, '')
+                if f != '':
+                    f = f[1:]
+                record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False)
+                
+        # output where we can find the file (relative path)
+        return output_path
     
     @dask.delayed
     def scrape_types(self, printout=False):
@@ -425,7 +461,7 @@ if __name__=='__main__':
     collection = []
     # add each delayed location to a collection for delayed (parallel) scrape
     for _ in range(len(locations)):
-        l = airbnb_scrape(locations[_], location_aliases[_])
+        l = airbnb_scrape(location=locations[_], location_alias=location_aliases[_])
 
         collection.append(dask.delayed(l.scrape_types)(l, printout=False))
 
