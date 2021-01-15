@@ -149,7 +149,9 @@ def get_basic_facilities(listing):
 
     # list of known possible basic facilites
     possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out']
+                'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out',
+                'Terrace', 'Sonos sound system', 'BBQ grill'  # new jan 14
+               ]
 
     # open a record for this listing
     room_dict = {}
@@ -210,7 +212,9 @@ def record_dataset(listings, file_path='output.csv', first_page=False):
         # basic facilites
         _ = get_basic_facilities(l)
         possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                    'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out']
+                    'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
+                    'Terrace', 'Sonos sound system', 'BBQ grill'
+                   ]
         p = [_[bf] for bf in possible]
         # list of all listing info
         out = [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
@@ -221,7 +225,8 @@ def record_dataset(listings, file_path='output.csv', first_page=False):
         names = ['url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
                  'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
                  "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
-                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool"
+                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
+                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14
                 ]
         df = pd.DataFrame(data, columns=names)
     else:
