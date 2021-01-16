@@ -79,8 +79,11 @@ def get_room_info(listing):
                 i = [i[0], '-'.join([i[1], i[2]])]
                 room_dict[i[1]] = i[0]
             else:
-                print(f'unexpected room_info | unexpected split_info len(i)=={len(i)}!=2!=3\n{i}')
-                room_dict[' '.join(i)] = i[0]
+                if i[1] == 'total':
+                    room_dict['bedrooms'] = [i[0]]
+                else:
+                    print(f'unexpected room_info | unexpected split_info len(i)=={len(i)}!=2!=3\n{i}')
+                    room_dict[' '.join(i)] = i[0]
         else:
             # Half-baths and Studios
             if i[0] == 'Studio':
@@ -89,7 +92,7 @@ def get_room_info(listing):
     
     weird_bedrooms = 0 
     try:
-        room_dict['bedrooms']
+        b = room_dict['bedrooms']
     except:
         try:
             room_dict['bedrooms'] = room_dict['bedroom']
@@ -191,63 +194,6 @@ def get_room_rating_and_reviews(listing):
             raise Exception(f'get_room_rating_and_reviews | listing == {type(listing), len(listing)}')
 
 
-def record_dataset(listings, tos, _filter, file_path='output.csv', first_page=False):
-    """
-    take scraped room classes and record their information to csv
-    
-    tos: time of scrape
-        > str datetime.datetime.now()
-       
-    _filter: filter applied to scrape
-        > str, None if no filter
-    """
-    data = []
-    for l in listings:
-        # listing link
-        a = get_listing_link(l)
-        # listing title
-        b = get_listing_title(l)
-        # top row info
-        c, d = get_top_row(l)
-        # room info (beds, baths, etc..)
-        _ = get_room_info(l)
-        e, f, g, h, i, j, k = _['guests'], _['bedrooms'], _['beds'], _['is_studio'], _['baths'], _['half_baths'], _['shared_baths']
-        del _
-        # room nightly rate
-        m = get_room_price(l)
-        # room rating and n reviews
-        n, o = get_room_rating_and_reviews(l)
-        # basic facilites
-        _ = get_basic_facilities(l)
-        possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                    'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
-                    'Terrace', 'Sonos sound system', 'BBQ grill'
-                   ]
-        p = [_[bf] for bf in possible]
-        # list of all listing info
-        out = [_filter] + [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
-        # add time of scrape to data as 1st datapoint (jan 15 2021)
-        out = [tos] + out
-        # add it to the data collection 
-        data.append(out)
-    if first_page:
-        # column names
-        names = ['ds', 'search_filter',  # added jan 15 2021
-                 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
-                 'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
-                 "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
-                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
-                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14 2021
-                ]
-        df = pd.DataFrame(data, columns=names)
-    else:
-        df = pd.read_csv(file_path)
-        new_df = pd.DataFrame(data, columns=df.columns)
-        df = pd.concat([df, new_df], axis=0)
-    df.to_csv(file_path, index=False)
-    return len(df)
-
-
 class airbnb_scrape():
     
     def __init__(self, location, location_alias):
@@ -261,6 +207,7 @@ class airbnb_scrape():
         self.n_pages = None
         self.n_results = None
         self.page_urls = []
+        self.data_dir = 'data/'
 
     def find_n_results(self, soup_page):
         """
@@ -323,7 +270,65 @@ class airbnb_scrape():
                 self.page_urls.append(url)
             else:
                 pass
-    
+
+    def record_dataset(self, listings, tos, _filter, file_path='output.csv', first_page=False):
+        """
+        take scraped room classes and record their information to csv
+
+        tos: time of scrape
+            > str datetime.datetime.now()
+
+        _filter: filter applied to scrape
+            > str, None if no filter
+        """
+        data = []
+        for l in listings:
+            # listing link
+            a = get_listing_link(l)
+            # listing title
+            b = get_listing_title(l)
+            # top row info
+            c, d = get_top_row(l)
+            # room info (beds, baths, etc..)
+            _ = get_room_info(l)
+            e, f, g, h, i, j, k = _['guests'], _['bedrooms'], _['beds'], _['is_studio'], _['baths'], _['half_baths'], _['shared_baths']
+            del _
+            # room nightly rate
+            m = get_room_price(l)
+            # room rating and n reviews
+            n, o = get_room_rating_and_reviews(l)
+            # basic facilites
+            _ = get_basic_facilities(l)
+            possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
+                        'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
+                        'Terrace', 'Sonos sound system', 'BBQ grill'
+                       ]
+            p = [_[bf] for bf in possible]
+            # list of all listing info
+            out = [_filter] + [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
+            # add time of scrape to data as 1st datapoint (jan 15 2021)
+            out = [tos] + out
+            # add it to the data collection 
+            data.append(out)
+
+        # add this scrape to the location's existing dataset
+        try:
+            names = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv', nrows=0).columns
+            pd.concat([pd.read_csv(f'{self.data_dir}{self.location_alias}.csv'), pd.DataFrame(data, columns=names)]).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+        # first time we've scraped this location, make a new dataset
+        except:
+            print(f'recording new location: {self.location_alias}')
+            # column names
+            names = ['ds', 'search_filter',  # added jan 15 2021
+                     'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
+                     'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
+                     "indoor_fireplace_bool", "hot_tub_bool", "free_parking_tbool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
+                     "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
+                     'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14 2021
+                    ]
+            # write csv file
+            pd.DataFrame(data, columns=names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+
     def scrape_search(self, base_link, search_alias, n_pages='auto', printout=False):
         """
         record results of a given search link
@@ -343,14 +348,14 @@ class airbnb_scrape():
                 f = f.replace(s, '')
             if f != '':
                 f = f[1:]
-            print(record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True))
+            print(self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True))
         else:
             f = search_alias
             for s in self.location.lower().split('--'):
                 f = f.replace(s, '')
             if f != '':
                 f = f[1:]
-            record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True)
+            self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True)
         
         # get urls for other pages 
         if n_pages=='auto':
@@ -366,7 +371,7 @@ class airbnb_scrape():
                     f = f.replace(s, '')
                 if f != '':
                     f = f[1:]
-                print(record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False))
+                print(self.record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False))
             else:
                 page, t = get_page(url)
                 f = search_alias
@@ -374,7 +379,7 @@ class airbnb_scrape():
                     f = f.replace(s, '')
                 if f != '':
                     f = f[1:]
-                record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False)
+                self.record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False)
                 
         # output where we can find the file (relative path)
         return output_path
@@ -385,23 +390,23 @@ class airbnb_scrape():
         record data from a loacations results for each of the big 4 room type filters and for each of those with superhosts only filter applied (8 total)
         """
         print(f'starting {self.location.split("--")[0]} @ {self.base_link}')  # scrape all 4 room types (default and with superhost filter)
-
+        
         # default search
         self.scrape_search(self.base_link, f'{self.location_alias}', printout=printout)
         self.scrape_search(f'{self.base_link}?superhost=true', f'{self.location_alias}_super_hosts', printout=printout)
-
+        
         # entire homes only
         self.scrape_search(f'{self.base_link}?room_types[]=Entire home', f'{self.location_alias}_entire_homes', printout=printout) 
         self.scrape_search(f'{self.base_link}?room_types[]=Entire home&superhost=true', f'{self.location_alias}_entire_home_super_hosts', printout=printout)
-
+        
         # hotes rooms only
         self.scrape_search(f'{self.base_link}?room_types[]=Hotel room', f'{self.location_alias}_hotel_rooms', printout=printout)
         self.scrape_search(f'{self.base_link}?room_types[]=Hotel room&superhost=true', f'{self.location_alias}_hotel_room_super_hosts', printout=printout)
-
+        
         # private rooms only
         self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_private_rooms', printout=printout)
         self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_private_room_super_hosts', printout=printout)
-
+        
         # shared rooms only
         self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_shared_rooms', printout=printout)
         self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_shared_room_super_hosts', printout=printout)
