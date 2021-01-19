@@ -322,7 +322,7 @@ class airbnb_scrape():
             names = ['ds', 'search_filter',  # added jan 15 2021
                      'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
                      'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
-                     "indoor_fireplace_bool", "hot_tub_bool", "free_parking_tbool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
+                     "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
                      "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
                      'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14 2021
                     ]
