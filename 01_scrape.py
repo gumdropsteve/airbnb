@@ -7,7 +7,7 @@ import pandas as pd
 import dask.delayed
 from dask import compute
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import date, datetime
 
 
 def get_page(url):
@@ -155,7 +155,7 @@ def get_basic_facilities(listing):
     # list of known possible basic facilites
     possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
                 'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out',
-                'Terrace', 'Sonos sound system', 'BBQ grill'  # new jan 14
+                'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer'  # new jan 19
                ]
 
     # open a record for this listing
@@ -271,7 +271,7 @@ class airbnb_scrape():
             else:
                 pass
 
-    def record_dataset(self, listings, tos, _filter, file_path='output.csv', first_page=False):
+    def record_dataset(self, listings, tos, _filter):
         """
         take scraped room classes and record their information to csv
 
@@ -301,7 +301,7 @@ class airbnb_scrape():
             _ = get_basic_facilities(l)
             possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
                         'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
-                        'Terrace', 'Sonos sound system', 'BBQ grill'
+                        'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer'
                        ]
             p = [_[bf] for bf in possible]
             # list of all listing info
@@ -311,51 +311,41 @@ class airbnb_scrape():
             # add it to the data collection 
             data.append(out)
 
+        # column names
+        names = ['ds', 'search_filter',  # added jan 15 2021
+                 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
+                 'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
+                 "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
+                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
+                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool',  # added jan 14 2021
+                 'hair_dryer_bool'  # added jan 19 2012
+                ]
+        
         # add this scrape to the location's existing dataset
         try:
-            names = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv', nrows=0).columns
-            pd.concat([pd.read_csv(f'{self.data_dir}{self.location_alias}.csv'), pd.DataFrame(data, columns=names)]).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+            old = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv')
+            old = old[names]
+            new = pd.DataFrame(data, columns=names)
+            df = pd.concat([old, new])
+            df.to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
         # first time we've scraped this location, make a new dataset
         except:
             print(f'recording new location: {self.location_alias}')
-            # column names
-            names = ['ds', 'search_filter',  # added jan 15 2021
-                     'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
-                     'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
-                     "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
-                     "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
-                     'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool'  # added jan 14 2021
-                    ]
             # write csv file
             pd.DataFrame(data, columns=names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
 
-    def scrape_search(self, base_link, search_alias, n_pages='auto', printout=False):
+    def scrape_search(self, base_link, search_alias, _filter, n_pages='auto', printout=False):
         """
         record results of a given search link
-        """
+        """        
         # get 1st page
         base_link_page_1, t = get_page(base_link)
         
-        today = datetime.today()
-        today = str(today).split(' ')[0]
-        output_path = f'{search_alias}_{today}.csv'
-        
         # record the 1st page
         if printout:
-            # determine filter
-            f = search_alias
-            for s in self.location.lower().split('--'):
-                f = f.replace(s, '')
-            if f != '':
-                f = f[1:]
-            print(self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True))
+            print(self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=_filter))
         else:
-            f = search_alias
-            for s in self.location.lower().split('--'):
-                f = f.replace(s, '')
-            if f != '':
-                f = f[1:]
-            self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=f, file_path=output_path, first_page=True)
+            self.record_dataset(get_room_classes(base_link_page_1), tos=t, _filter=_filter)
         
         # get urls for other pages 
         if n_pages=='auto':
@@ -366,23 +356,13 @@ class airbnb_scrape():
         for url in self.page_urls:
             if printout:
                 page, t = get_page(url)
-                f = search_alias
-                for s in self.location.lower().split('--'):
-                    f = f.replace(s, '')
-                if f != '':
-                    f = f[1:]
-                print(self.record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False))
+                print(self.record_dataset(get_room_classes(page), tos=t, _filter=_filter))
             else:
                 page, t = get_page(url)
-                f = search_alias
-                for s in self.location.lower().split('--'):
-                    f = f.replace(s, '')
-                if f != '':
-                    f = f[1:]
-                self.record_dataset(get_room_classes(page), tos=t, _filter=f, file_path=output_path, first_page=False)
+                self.record_dataset(get_room_classes(page), tos=t, _filter=_filter)
                 
         # output where we can find the file (relative path)
-        return output_path
+        return f'{self.data_dir}{self.location_alias}.csv'
     
     @dask.delayed
     def scrape_types(self, printout=False):
@@ -391,25 +371,32 @@ class airbnb_scrape():
         """
         print(f'starting {self.location.split("--")[0]} @ {self.base_link}')  # scrape all 4 room types (default and with superhost filter)
         
-        # default search
-        self.scrape_search(self.base_link, f'{self.location_alias}', printout=printout)
-        self.scrape_search(f'{self.base_link}?superhost=true', f'{self.location_alias}_super_hosts', printout=printout)
-        
-        # entire homes only
-        self.scrape_search(f'{self.base_link}?room_types[]=Entire home', f'{self.location_alias}_entire_homes', printout=printout) 
-        self.scrape_search(f'{self.base_link}?room_types[]=Entire home&superhost=true', f'{self.location_alias}_entire_home_super_hosts', printout=printout)
-        
-        # hotes rooms only
-        self.scrape_search(f'{self.base_link}?room_types[]=Hotel room', f'{self.location_alias}_hotel_rooms', printout=printout)
-        self.scrape_search(f'{self.base_link}?room_types[]=Hotel room&superhost=true', f'{self.location_alias}_hotel_room_super_hosts', printout=printout)
-        
-        # private rooms only
-        self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_private_rooms', printout=printout)
-        self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_private_room_super_hosts', printout=printout)
-        
-        # shared rooms only
-        self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_shared_rooms', printout=printout)
-        self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_shared_room_super_hosts', printout=printout)
+        today = str(date.today())
+        last_date_recorded = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv').ds.str.split()[-1:].values[0][0]
+        # check to make sure we haven't already recorded this place today
+        if last_date_recorded != today:
+            # default search
+            self.scrape_search(self.base_link, f'{self.location_alias}', _filter='', printout=printout)
+            self.scrape_search(f'{self.base_link}?superhost=true', f'{self.location_alias}_super_hosts', _filter='super_hosts', printout=printout)
+
+            # entire homes only
+            self.scrape_search(f'{self.base_link}?room_types[]=Entire home', f'{self.location_alias}_entire_homes', _filter='entire_homes', printout=printout) 
+            self.scrape_search(f'{self.base_link}?room_types[]=Entire home&superhost=true', f'{self.location_alias}_entire_home_super_hosts', _filter='entire_home_super_hosts', printout=printout)
+
+            # hotes rooms only
+            self.scrape_search(f'{self.base_link}?room_types[]=Hotel room', f'{self.location_alias}_hotel_rooms', _filter='hotel_rooms', printout=printout)
+            self.scrape_search(f'{self.base_link}?room_types[]=Hotel room&superhost=true', f'{self.location_alias}_hotel_room_super_hosts', _filter='hotel_room_super_hosts', printout=printout)
+
+            # private rooms only
+            self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_private_rooms', _filter='private_rooms', printout=printout)
+            self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_private_room_super_hosts', _filter='private_room_super_hosts', printout=printout)
+
+            # shared rooms only
+            self.scrape_search(f'{self.base_link}?room_types[]=Private room', f'{self.location_alias}_shared_rooms', _filter='shared_rooms', printout=printout)
+            self.scrape_search(f'{self.base_link}?room_types[]=Shared room&superhost=true', f'{self.location_alias}_shared_room_super_hosts', _filter='shared_room_super_hosts', printout=printout)
+        # we already recorded today
+        else:
+            print(f'{self.location.split("--")[0]} already recorded today')
 
 
 locations = ['Oakland--California--United-States',
@@ -435,7 +422,34 @@ locations = ['Oakland--California--United-States',
              
              'Anchorage--Alaska--United-States',
              'North-Pole--Alaska--United-States',
-             'Alaska--United-States']
+             'Alaska--United-States',
+             
+             'Budapest--Hungary',
+             'Hungary',
+             
+             'Tokyo--Japan',
+             'Japan',
+            
+             'Florida-Keys--Florida--United-States',
+             'Miami--Florida--United-States',
+             'Florida--United-States',
+             
+             'Phu-Quoc-Island--Phú-Quốc--Kien-Giang--Vietnam',
+             'Ho-Chi-Minh--Vietnam',
+             'Can-Tho--Vietnam',
+             'Vietnam',
+             
+             'London--United-Kingdom',
+             'City-of-London--London--United-Kingdom',
+             'Camden-Town--London--United-Kingdom',
+             'Canary-Wharf--London--United-Kingdom',
+             'United-Kingdom',
+             
+             'Riyadh-Province--Saudi-Arabia',
+             'Jeddah--Makkah-Province--Saudi-Arabia',
+             'Dammam--Eastern-Province--Saudi-Arabia',
+             'Saudi-Arabia'
+            ]
 
 location_aliases = ['oakland',
                     'san_diego',
@@ -460,7 +474,34 @@ location_aliases = ['oakland',
                     
                     'anchorage',
                     'north_pole',
-                    'alaska']
+                    'alaska',
+                    
+                    'budapest',
+                    'hungary',
+                    
+                    'tokyo',
+                    'japan',
+                   
+                    'florida_keys',
+                    'miami',
+                    'florida',
+                   
+                    'pho_quoc_island',
+                    'ho_chi_minh',
+                    'can_tho',
+                    'vietnam',
+                    
+                    'london',
+                    'city_of_london',
+                    'camden_town',
+                    'canary_wharf',
+                    'united_kingdom',
+                    
+                    'riyadh',
+                    'jeddah',
+                    'dammam',
+                    'saudi_arabia'
+                   ]
 
 if __name__=='__main__':
     collection = []
