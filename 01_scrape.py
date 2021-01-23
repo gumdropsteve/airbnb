@@ -141,40 +141,6 @@ def get_room_price(listing):
     return float(price)
 
 
-def get_basic_facilities(listing):
-    '''
-    returns a dictionary of the given listing's basic facilities with True / None values based on known possible basic facilites
-    '''
-    # make list of this listing's basic facilites
-    try:
-        basic_facilities = listing.findAll("div", {"class":"_kqh46o"})[1].text
-        basic_facilities = basic_facilities.split(' · ')
-    except:
-        basic_facilities = []
-
-    # list of known possible basic facilites
-    possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out',
-                'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer'  # new jan 19
-               ]
-
-    # open a record for this listing
-    room_dict = {}
-
-    # add each basic facility to this room's record 
-    for f in basic_facilities:
-        if f in possible:
-            room_dict[f] = True
-        else:
-            raise Exception(f'unexpected basic_facilites | {f} | is new?')
-
-    # add None for any basic facilities this listing doesn't offer
-    for f in possible:
-        room_dict[f] = room_dict.get(f, None)
-
-    return room_dict
-
-
 def get_room_rating_and_reviews(listing):
     """
     returns star rating and number of reviews of given listing
@@ -208,6 +174,64 @@ class airbnb_scrape():
         self.n_results = None
         self.page_urls = []
         self.data_dir = 'data/'
+        
+        # set known basic amenities (added jan 22 2021)
+        self.possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
+                         'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
+                         'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer']
+        # set current schema column names (added jan 22 2021)
+        self.names = ['ds', 'search_filter',  # added jan 15 2021
+                      'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
+                      'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
+                      "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
+                      "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
+                      'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool',  # added jan 14 2021
+                      'hair_dryer_bool'  # added jan 19 2012
+                     ]
+        
+        
+    def get_basic_facilities(self, listing):
+        '''
+        returns a dictionary of the given listing's basic facilities with True / None values based on known possible basic facilites
+        '''
+        # make list of this listing's basic facilites
+        try:
+            basic_facilities = listing.findAll("div", {"class":"_kqh46o"})[1].text
+            basic_facilities = basic_facilities.split(' · ')
+        except:
+            basic_facilities = []
+
+        # open a record for this listing
+        room_dict = {}
+
+        # add each basic facility to this room's record 
+        for f in basic_facilities:
+            if f in self.possible:
+                room_dict[f] = True
+            else:
+                # looks liek we have a new basic facility
+                i = input(f'unexpected basic_facilites | {f} | is new? (y/n) ')
+                if i == 'y':
+                    i = input(f'ok, new basic facility\nwhat should the column name be?\ne.g. Hot tub is hot_tub_bool\n"exit" to quit\n column name == ')
+                    if i != 'exit':
+                        # set new amenity
+                        room_dict[f] = True
+                        # update possible amenities and column names
+                        self.possible.append(i)
+                        self.names.append(f)
+                        print(f'\nnew self.possible ==\n{self.possible}\n\nnew self.names ==\n{self.names}\n\nplease update now (sleeping 60 seconds)\n')
+                        sleep(60)
+                    else:
+                        raise Exception(f"not sure what's going on.. | unexpected basic_facilites | {f} | user exit")
+                else:
+                    raise Exception(f"not sure what's going on.. | unexpected basic_facilites | {f}")
+
+        # add None for any basic facilities this listing doesn't offer
+        for f in self.possible:
+            room_dict[f] = room_dict.get(f, None)
+
+        return room_dict
+
 
     def find_n_results(self, soup_page):
         """
@@ -298,41 +322,28 @@ class airbnb_scrape():
             # room rating and n reviews
             n, o = get_room_rating_and_reviews(l)
             # basic facilites
-            _ = get_basic_facilities(l)
-            possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                        'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
-                        'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer'
-                       ]
-            p = [_[bf] for bf in possible]
+            _ = self.get_basic_facilities(l)
+            p = [_[bf] for bf in self.possible]
             # list of all listing info
             out = [_filter] + [a, b, c, d, e, f, g, h, i, j, k, m, n, o] + p
             # add time of scrape to data as 1st datapoint (jan 15 2021)
             out = [tos] + out
             # add it to the data collection 
             data.append(out)
-
-        # column names
-        names = ['ds', 'search_filter',  # added jan 15 2021
-                 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
-                 'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
-                 "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
-                 "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
-                 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool',  # added jan 14 2021
-                 'hair_dryer_bool'  # added jan 19 2012
-                ]
         
         # add this scrape to the location's existing dataset
         try:
-            old = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv')
-            old = old[names]
-            new = pd.DataFrame(data, columns=names)
-            df = pd.concat([old, new])
-            df.to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+            pd.concat([pd.read_csv(f'{self.data_dir}{self.location_alias}.csv'), 
+                       pd.DataFrame(data, columns=self.names)], axis=0).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
         # first time we've scraped this location, make a new dataset
         except:
-            print(f'recording new location: {self.location_alias}')
-            # write csv file
-            pd.DataFrame(data, columns=names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+            # check this is actually new so we don't accidenly overwrite existing data
+            i = input(f'recording new location: {self.location_alias}? (y/n) ')
+            if i == 'y':
+                # write csv file
+                pd.DataFrame(data, columns=self.names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+            else:
+                raise Exception("not recording a new location, what's going on?")
 
     def scrape_search(self, base_link, search_alias, _filter, n_pages='auto', printout=False):
         """
@@ -372,7 +383,11 @@ class airbnb_scrape():
         print(f'starting {self.location.split("--")[0]} @ {self.base_link}')  # scrape all 4 room types (default and with superhost filter)
         
         today = str(date.today())
-        last_date_recorded = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv').ds.str.split()[-1:].values[0][0]
+        try:
+            last_date_recorded = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv').ds.str.split()[-1:].values[0][0]
+        except:
+            last_date_recorded = None
+            
         # check to make sure we haven't already recorded this place today
         if last_date_recorded != today:
             # default search
