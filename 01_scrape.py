@@ -5,6 +5,7 @@ import math
 import requests
 import pandas as pd
 import dask.delayed
+from time import sleep
 from dask import compute
 from bs4 import BeautifulSoup
 from datetime import date, datetime
@@ -117,6 +118,13 @@ def get_room_info(listing):
     room_dict['is_studio'] = room_dict.get('is_studio', False)
     room_dict['beds'] = room_dict.get('beds')
     room_dict['guests'] = room_dict.get('beds')
+
+    # check for bedrooms list
+    if type(room_dict['bedrooms']) == list:
+        if len(room_dict['bedrooms']) == 1:
+            room_dict['bedrooms'] = float(room_dict['bedrooms'][0])
+        else:
+            raise Exception(f'unexpected bedrooms list | {room_dict["bedrooms"]}')
             
     room_dict = {key:value for key,value in room_dict.items() if key in ['guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths']}
             
@@ -178,16 +186,13 @@ class airbnb_scrape():
         # set known basic amenities (added jan 22 2021)
         self.possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
                          'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
-                         'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer']
+                         'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer', "Chef's kitchen"]
         # set current schema column names (added jan 22 2021)
-        self.names = ['ds', 'search_filter',  # added jan 15 2021
-                      'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 
-                      'price', 'avg_rating', 'n_reviews', "gym_bool", "wifi_bool", "self_check_in_bool", "air_conditioning_bool", "pets_allowed_bool", 
-                      "indoor_fireplace_bool", "hot_tub_bool", "free_parking_bool", "pool_bool", "kitchen_bool", "breakfast_bool", "elevator_bool",
-                      "washer_bool", "dryer_bool", "heating_bool", "waterfront_bool", "dishwasher_bool", "beachfront_bool", "ski_in_ski_out_bool",
-                      'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool',  # added jan 14 2021
-                      'hair_dryer_bool'  # added jan 19 2012
-                     ]
+        self.names = ['ds', 'search_filter', 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 
+                      'shared_baths', 'price', 'avg_rating', 'n_reviews', 'gym_bool', 'wifi_bool', 'self_check_in_bool', 'air_conditioning_bool', 
+                      'pets_allowed_bool', 'indoor_fireplace_bool', 'hot_tub_bool', 'free_parking_bool', 'pool_bool', 'kitchen_bool', 'breakfast_bool', 
+                      'elevator_bool', 'washer_bool', 'dryer_bool', 'heating_bool', 'waterfront_bool', 'dishwasher_bool', 'beachfront_bool', 
+                      'ski_in_ski_out_bool', 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool', 'hair_dryer_bool', "chefs_kitchen_bool"]
         
         
     def get_basic_facilities(self, listing):
@@ -217,8 +222,8 @@ class airbnb_scrape():
                         # set new amenity
                         room_dict[f] = True
                         # update possible amenities and column names
-                        self.possible.append(i)
-                        self.names.append(f)
+                        self.possible.append(f)
+                        self.names.append(i)
                         print(f'\nnew self.possible ==\n{self.possible}\n\nnew self.names ==\n{self.names}\n\nplease update now (sleeping 60 seconds)\n')
                         sleep(60)
                     else:
@@ -338,7 +343,7 @@ class airbnb_scrape():
         # first time we've scraped this location, make a new dataset
         except:
             # check this is actually new so we don't accidenly overwrite existing data
-            i = input(f'recording new location: {self.location_alias}? (y/n) ')
+            i = 'y'#input(f'recording new location: {self.location_alias}? (y/n) ')
             if i == 'y':
                 # write csv file
                 pd.DataFrame(data, columns=self.names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
@@ -463,7 +468,28 @@ locations = ['Oakland--California--United-States',
              'Riyadh-Province--Saudi-Arabia',
              'Jeddah--Makkah-Province--Saudi-Arabia',
              'Dammam--Eastern-Province--Saudi-Arabia',
-             'Saudi-Arabia'
+             'Saudi-Arabia',
+             
+             'Tbilisi--Georgia',
+             'Georgia',
+             
+             'United-States',
+             
+             'Sydney--New-South-Wales--Australia',
+             'Melbourne--Victoria--Australia',
+             'Australia',
+             
+             'Boise--Idaho--United-States',
+             "Coeur-d'Alene--Idaho--United-States",
+             'Idaho--United-States',
+             
+             'New-Orleans--Louisiana--United-States',
+             'Baton-Rouge--Louisiana--United-States',
+             'Shreveport--Louisiana--United-States',
+             'Louisiana--United-States',
+             
+             'Philadelphia--Pennsylvania--United-States',
+             'Pennsylvania--United-States'
             ]
 
 location_aliases = ['oakland',
@@ -515,7 +541,28 @@ location_aliases = ['oakland',
                     'riyadh',
                     'jeddah',
                     'dammam',
-                    'saudi_arabia'
+                    'saudi_arabia',
+                    
+                    'tbilisi',
+                    'georgia_country',
+                    
+                    'united_states',
+                    
+                    'sydney',
+                    'melbourne',
+                    'australia',
+                    
+                    'boise',
+                    'coeur_dalene',
+                    'idaho',
+                    
+                    'new_orleans',
+                    'baton_rouge',
+                    'shreveport',
+                    'louisiana',
+                    
+                    'philadelphia',
+                    'pennsylvania'
                    ]
 
 if __name__=='__main__':
