@@ -184,17 +184,22 @@ class airbnb_scrape():
         self.data_dir = 'data/'
         
         # set known basic amenities (added jan 22 2021)
-        self.possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 
-                         'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 
-                         'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer', "Chef's kitchen"]
+        self.possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 
+                         'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer', "Chef's kitchen", 'Wet bar', 'Sun loungers', 
+                         'Home theater', 'Housekeeping', 'Gated property', 'Gas fireplace', 'Plunge pool', 'Infinity pool', 'Sun deck', 'Game room', 'Surround sound system', 'Resort access']
+
+
+
         # set current schema column names (added jan 22 2021)
-        self.names = ['ds', 'search_filter', 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 
-                      'shared_baths', 'price', 'avg_rating', 'n_reviews', 'gym_bool', 'wifi_bool', 'self_check_in_bool', 'air_conditioning_bool', 
-                      'pets_allowed_bool', 'indoor_fireplace_bool', 'hot_tub_bool', 'free_parking_bool', 'pool_bool', 'kitchen_bool', 'breakfast_bool', 
-                      'elevator_bool', 'washer_bool', 'dryer_bool', 'heating_bool', 'waterfront_bool', 'dishwasher_bool', 'beachfront_bool', 
-                      'ski_in_ski_out_bool', 'terrace_bool', 'sonos_sound_system_bool', 'bbq_grill_bool', 'hair_dryer_bool', "chefs_kitchen_bool"]
-        
-        
+        self.names = ['ds', 'search_filter', 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 'price', 'avg_rating', 'n_reviews', 'gym_bool', 
+                      'wifi_bool', 'self_check_in_bool', 'air_conditioning_bool', 'pets_allowed_bool', 'indoor_fireplace_bool', 'hot_tub_bool', 'free_parking_bool', 'pool_bool', 'kitchen_bool', 'breakfast_bool', 
+                      'elevator_bool', 'washer_bool', 'dryer_bool', 'heating_bool', 'waterfront_bool', 'dishwasher_bool', 'beachfront_bool', 'ski_in_ski_out_bool', 'terrace_bool', 'sonos_sound_system_bool', 
+                      'bbq_grill_bool', 'hair_dryer_bool', 'chefs_kitchen_bool', 'wet_bar_bool', 'sun_loungers_bool', 'home_theater_bool', 'housekeeping_bool', 'gated_property_bool', 'gas_fireplace_bool', 
+                      'plunge_pool_bool', 'infinity_pool_bool', 'sun_deck_bool', 'game_room_bool', 'surround_sound_system_bool', 'resort_access_bool']
+
+
+
+    
     def get_basic_facilities(self, listing):
         '''
         returns a dictionary of the given listing's basic facilities with True / None values based on known possible basic facilites
@@ -236,7 +241,6 @@ class airbnb_scrape():
             room_dict[f] = room_dict.get(f, None)
 
         return room_dict
-
 
     def find_n_results(self, soup_page):
         """
@@ -471,7 +475,7 @@ locations = ['Oakland--California--United-States',
              'Saudi-Arabia',
              
              'Tbilisi--Georgia',
-             'Georgia',
+             'Georgia--Europe',
              
              'United-States',
              
@@ -489,7 +493,16 @@ locations = ['Oakland--California--United-States',
              'Louisiana--United-States',
              
              'Philadelphia--Pennsylvania--United-States',
-             'Pennsylvania--United-States'
+             'Pennsylvania--United-States',
+             
+             'St.-Thomas--U.S.-Virgin-Islands',
+             'Virgin-Islands',
+             
+             'Honolulu--HI--United-States',
+             
+             'Soul--South-Korea',
+             
+             'Seattle--Washington--United-States',
             ]
 
 location_aliases = ['oakland',
@@ -562,7 +575,16 @@ location_aliases = ['oakland',
                     'louisiana',
                     
                     'philadelphia',
-                    'pennsylvania'
+                    'pennsylvania',
+                    
+                    'st_thomas',
+                    'virgin_islands',
+                    
+                    'honolulu',
+                    
+                    'seoul',
+                    
+                    'seattle',
                    ]
 
 if __name__=='__main__':
