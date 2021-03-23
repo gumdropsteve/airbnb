@@ -2,7 +2,7 @@
 Getting something working, figuring out what we're doing..
 
 #### `01_building_multi_page_base_scrape.ipynb`
-Adding the ability to scrape multiple pages from the same location.
+Adding the ability to scrape multiple pages from the same location. Initial dask.delayed exposure (parallelizing single scrape).
 
 #### `2_building_multi_location_multi_page_base_scrape.ipynb`
 Scraping multiple pages from multiple locations in parallel with dask.delayed.
