@@ -1,4 +1,4 @@
-import math 
+import math
 import time
 import requests
 import pandas as pd
@@ -89,9 +89,11 @@ def get_room_info(listing):
                 room_dict['is_studio'] = True
             room_dict[i[0]] = 0
     
+    # need better solution for bedrooms
     weird_bedrooms = 0 
     try:
         b = room_dict['bedrooms']
+        del b
     except:
         try:
             room_dict['bedrooms'] = room_dict['bedroom']
@@ -192,6 +194,15 @@ class airbnb_scrape():
                       'elevator_bool', 'washer_bool', 'dryer_bool', 'heating_bool', 'waterfront_bool', 'dishwasher_bool', 'beachfront_bool', 'ski_in_ski_out_bool', 'terrace_bool', 'sonos_sound_system_bool', 
                       'bbq_grill_bool', 'hair_dryer_bool', 'chefs_kitchen_bool', 'wet_bar_bool', 'sun_loungers_bool', 'home_theater_bool', 'housekeeping_bool', 'gated_property_bool', 'gas_fireplace_bool', 
                       'plunge_pool_bool', 'infinity_pool_bool', 'sun_deck_bool', 'game_room_bool', 'surround_sound_system_bool', 'resort_access_bool']
+        
+        self.dtypes = {'ds': 'object', 'search_filter': 'object', 'url': 'object', 'title': 'object', 'type': 'object', 'location': 'object', 'guests': 'float64', 'bedrooms': 'float64', 'beds': 'float64', 
+                       'is_studio': 'bool', 'baths': 'float64', 'half_baths': 'float64', 'shared_baths': 'float64', 'price': 'float64', 'avg_rating': 'float64', 'n_reviews': 'float64', 'gym_bool': 'bool', 
+                       'wifi_bool': 'bool', 'self_check_in_bool': 'bool', 'air_conditioning_bool': 'bool', 'pets_allowed_bool': 'bool', 'indoor_fireplace_bool': 'bool', 'hot_tub_bool': 'bool', 'free_parking_bool': 
+                       'bool', 'pool_bool': 'bool', 'kitchen_bool': 'bool', 'breakfast_bool': 'bool', 'elevator_bool': 'bool', 'washer_bool': 'bool', 'dryer_bool': 'bool', 'heating_bool': 'bool', 
+                       'waterfront_bool': 'bool', 'dishwasher_bool': 'bool', 'beachfront_bool': 'bool', 'ski_in_ski_out_bool': 'bool', 'terrace_bool': 'bool', 'sonos_sound_system_bool': 'bool', 
+                       'bbq_grill_bool': 'bool', 'hair_dryer_bool': 'bool', 'chefs_kitchen_bool': 'bool', 'wet_bar_bool': 'bool', 'sun_loungers_bool': 'bool', 'home_theater_bool': 'bool', 'housekeeping_bool': 'bool', 
+                       'gated_property_bool': 'bool', 'gas_fireplace_bool': 'bool', 'plunge_pool_bool': 'bool', 'infinity_pool_bool': 'bool', 'sun_deck_bool': 'bool', 'game_room_bool': 'bool', 
+                       'surround_sound_system_bool': 'bool', 'resort_access_bool': 'bool'}
 
     def get_basic_facilities(self, listing):
         '''
@@ -206,7 +217,7 @@ class airbnb_scrape():
 
         # open a record for this listing
         room_dict = {}
-
+        
         # add each basic facility to this room's record 
         for f in basic_facilities:
             if f in self.possible:
@@ -228,13 +239,13 @@ class airbnb_scrape():
                         raise Exception(f"not sure what's going on.. | unexpected basic_facilites | {f} | user exit")
                 else:
                     raise Exception(f"not sure what's going on.. | unexpected basic_facilites | {f}")
-
+        
         # add None for any basic facilities this listing doesn't offer
         for f in self.possible:
             room_dict[f] = room_dict.get(f, None)
-
+        
         return room_dict
-
+    
     def find_n_results(self, soup_page):
         """
         finds total number of search results from page 1 (of search results)
@@ -244,7 +255,7 @@ class airbnb_scrape():
             self.n_results = soup_page.find('div', {'class':'_1h559tl'}).text
         except:
             raise Exception('n results not found on 1st page')
-
+    
     def find_n_pages(self, soup_page, listings_per_page=20):
         """
         finds number of existing pages from 1st page of search results
@@ -272,7 +283,7 @@ class airbnb_scrape():
             self.n_pages = 1
         # tell me how many pages there are
         print(self.n_pages)
-
+    
     def make_page_urls(self, base_page, n_pages='auto', listings_per_page=20):
         """
         makes pages for search results (sets of 20)
@@ -296,7 +307,7 @@ class airbnb_scrape():
                 self.page_urls.append(url)
             else:
                 pass
-
+    
     def record_dataset(self, listings, tos, _filter):
         """
         take scraped room classes and record their information to csv
@@ -342,11 +353,22 @@ class airbnb_scrape():
             # check this is actually new so we don't accidenly overwrite existing data (delete 'y'# from the below line if you want to perform manual check, outherwise defaults to make new file)
             i = 'y'#input(f'recording new location: {self.location_alias}? (y/n) ')
             if i == 'y':
-                # write csv file
-                pd.DataFrame(data, columns=self.names).to_parquet(f'{self.data_dir}{self.location_alias}.parquet', index=False)
+                # make dataframe from scraped data, column names from __init__()
+                df = pd.DataFrame(data, columns=self.names)
+                # go through each column
+                for column in self.dtypes:
+                    # our bool data is scraped as True/None, we need True/False
+                    if 'bool' in column:
+                        # fill None values in bool column with False
+                        df[column] = df[column].fillna(False)
+                    # convert column to expected dtype for parquet
+                    df[column] = df[column].astype(self.dtypes[column])
+                # write new parquet file
+                df.to_parquet(f'{self.data_dir}{self.location_alias}.parquet', index=False)
+                del df  # free up space
             else:
                 raise Exception("not recording a new location, what's going on?")
-
+    
     def scrape_search(self, base_link, search_alias, _filter, n_pages='auto', printout=False):
         """
         record results of a given search link
