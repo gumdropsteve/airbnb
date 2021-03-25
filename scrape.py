@@ -422,14 +422,18 @@ if __name__=='__main__':
     # start timer
     start = time.time()
 
-    collection = []
     # add each delayed location to a collection for delayed (parallel) scrape
+    collection = []
     for _ in range(len(locations)):
+        # make airbnb scrape class instance for this location
         l = airbnb_scrape(location=locations[_], location_alias=location_aliases[_])
+        
+        # make delayed scrape_types() method for this location
+        delayed_scrape = dask.delayed(l.scrape_types)(l, printout=False)
 
-        collection.append(dask.delayed(l.scrape_types)(l, printout=False))
+        collection.append(delayed_scrape)
 
-    # execute delayed scrape
+    # execute delayed scrapes
     compute(*collection)
 
     print(f'runtime: {time.time() - start}')
