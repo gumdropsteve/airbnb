@@ -1,7 +1,5 @@
-import time
-start = time.time()
-
 import math 
+import time
 import requests
 import pandas as pd
 import dask.delayed
@@ -183,23 +181,18 @@ class airbnb_scrape():
         self.page_urls = []
         self.data_dir = 'data/'
         
-        # set known basic amenities (added jan 22 2021)
+        # set known basic amenities
         self.possible = ['Gym', 'Wifi', 'Self check-in', 'Air conditioning', 'Pets allowed', 'Indoor fireplace', 'Hot tub', 'Free parking', 'Pool', 'Kitchen', 'Breakfast', 'Elevator', 'Washer', 'Dryer', 
                          'Heating', 'Waterfront', 'Dishwasher', 'Beachfront', 'Ski-in/Ski-out', 'Terrace', 'Sonos sound system', 'BBQ grill', 'Hair dryer', "Chef's kitchen", 'Wet bar', 'Sun loungers', 
                          'Home theater', 'Housekeeping', 'Gated property', 'Gas fireplace', 'Plunge pool', 'Infinity pool', 'Sun deck', 'Game room', 'Surround sound system', 'Resort access']
 
-
-
-        # set current schema column names (added jan 22 2021)
+        # set current schema column names
         self.names = ['ds', 'search_filter', 'url', 'title', 'type', 'location', 'guests', 'bedrooms', 'beds', 'is_studio', 'baths', 'half_baths', 'shared_baths', 'price', 'avg_rating', 'n_reviews', 'gym_bool', 
                       'wifi_bool', 'self_check_in_bool', 'air_conditioning_bool', 'pets_allowed_bool', 'indoor_fireplace_bool', 'hot_tub_bool', 'free_parking_bool', 'pool_bool', 'kitchen_bool', 'breakfast_bool', 
                       'elevator_bool', 'washer_bool', 'dryer_bool', 'heating_bool', 'waterfront_bool', 'dishwasher_bool', 'beachfront_bool', 'ski_in_ski_out_bool', 'terrace_bool', 'sonos_sound_system_bool', 
                       'bbq_grill_bool', 'hair_dryer_bool', 'chefs_kitchen_bool', 'wet_bar_bool', 'sun_loungers_bool', 'home_theater_bool', 'housekeeping_bool', 'gated_property_bool', 'gas_fireplace_bool', 
                       'plunge_pool_bool', 'infinity_pool_bool', 'sun_deck_bool', 'game_room_bool', 'surround_sound_system_bool', 'resort_access_bool']
 
-
-
-    
     def get_basic_facilities(self, listing):
         '''
         returns a dictionary of the given listing's basic facilities with True / None values based on known possible basic facilites
@@ -346,7 +339,7 @@ class airbnb_scrape():
                        pd.DataFrame(data, columns=self.names)], axis=0).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
         # first time we've scraped this location, make a new dataset
         except:
-            # check this is actually new so we don't accidenly overwrite existing data
+            # check this is actually new so we don't accidenly overwrite existing data (delete 'y'# from the below line if you want to perform manual check, outherwise defaults to make new file)
             i = 'y'#input(f'recording new location: {self.location_alias}? (y/n) ')
             if i == 'y':
                 # write csv file
@@ -503,6 +496,10 @@ locations = ['Oakland--California--United-States',
              'Soul--South-Korea',
              
              'Seattle--Washington--United-States',
+             
+             'Barcelona',
+             'Palma',
+             'Murcia',
             ]
 
 location_aliases = ['oakland',
@@ -585,9 +582,16 @@ location_aliases = ['oakland',
                     'seoul',
                     
                     'seattle',
+                    
+                    'barcelona',
+                    'palma',
+                    'murcia',
                    ]
 
 if __name__=='__main__':
+    # start timer
+    start = time.time()
+
     collection = []
     # add each delayed location to a collection for delayed (parallel) scrape
     for _ in range(len(locations)):
