@@ -335,15 +335,15 @@ class airbnb_scrape():
         
         # add this scrape to the location's existing dataset
         try:
-            pd.concat([pd.read_csv(f'{self.data_dir}{self.location_alias}.csv'), 
-                       pd.DataFrame(data, columns=self.names)], axis=0).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+            pd.concat([pd.read_parquet(f'{self.data_dir}{self.location_alias}.parquet'), 
+                       pd.DataFrame(data, columns=self.names)], axis=0).to_parquet(f'{self.data_dir}{self.location_alias}.parquet', index=False)
         # first time we've scraped this location, make a new dataset
         except:
             # check this is actually new so we don't accidenly overwrite existing data (delete 'y'# from the below line if you want to perform manual check, outherwise defaults to make new file)
             i = 'y'#input(f'recording new location: {self.location_alias}? (y/n) ')
             if i == 'y':
                 # write csv file
-                pd.DataFrame(data, columns=self.names).to_csv(f'{self.data_dir}{self.location_alias}.csv', index=False)
+                pd.DataFrame(data, columns=self.names).to_parquet(f'{self.data_dir}{self.location_alias}.parquet', index=False)
             else:
                 raise Exception("not recording a new location, what's going on?")
 
@@ -375,7 +375,7 @@ class airbnb_scrape():
                 self.record_dataset(get_room_classes(page), tos=t, _filter=_filter)
                 
         # output where we can find the file (relative path)
-        return f'{self.data_dir}{self.location_alias}.csv'
+        return f'{self.data_dir}{self.location_alias}.parquet'
     
     @dask.delayed
     def scrape_types(self, printout=False):
@@ -386,7 +386,7 @@ class airbnb_scrape():
         
         today = str(date.today())
         try:
-            last_date_recorded = pd.read_csv(f'{self.data_dir}{self.location_alias}.csv').ds.str.split()[-1:].values[0][0]
+            last_date_recorded = pd.read_parquet(f'{self.data_dir}{self.location_alias}.parquet').ds.str.split()[-1:].values[0][0]
         except:
             last_date_recorded = None
             
